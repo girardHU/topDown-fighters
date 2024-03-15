@@ -1,2 +1,2 @@
 # topDown-fighters
-A small two players game when you fight one another on a platform
+A small two players game where you fight one another on a platform.
