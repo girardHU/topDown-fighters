@@ -4,39 +4,111 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public float movementSpeed = 200.0f;
-    public float turnSpeed = 1000.0f;
+    public float rotationSpeed = 15.0f; // Control the speed of rotation
+    public float movementSpeed = 250.0f;
+    public float slowingFactor = 1.2f;
+
+    private float attackDuration = 0.5f;
+    private Quaternion targetRotation;
+    private Vector3 movement;
+
     private Rigidbody rb;
     private Animator animator;
 
     void Start()
     {
-        // Get the Rigidbody component from the GameObject
         rb = GetComponent<Rigidbody>();
         animator = gameObject.GetComponentInChildren<Animator>();
+        targetRotation = transform.rotation; // Initialize with current rotation
     }
 
     void Update()
     {
+        movement = Vector3.zero;
 
-        // Get input from WASD keys
-        float moveHorizontal = Input.GetAxisRaw("Horizontal");
-        float moveVertical = Input.GetAxisRaw("Vertical");
-
-        // Create a Vector3 movement
-        Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
-
-        // rotate the player in the correct direction according to WASD
-        if (movement != Vector3.zero)
+        // Detect key presses and update the target rotation
+        if (Input.GetKey(KeyCode.W))
         {
-            Quaternion toRotation = Quaternion.LookRotation(movement, Vector3.up);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, toRotation, turnSpeed * Time.deltaTime);
+            targetRotation = Quaternion.LookRotation(Vector3.forward);
+            movement = Vector3.forward;
+        }
+        else if (Input.GetKey(KeyCode.S))
+        {
+            targetRotation = Quaternion.LookRotation(Vector3.back);
+            movement = Vector3.back;
+        }
+        else if (Input.GetKey(KeyCode.A))
+        {
+            targetRotation = Quaternion.LookRotation(Vector3.left);
+            movement = Vector3.left;
+        }
+        else if (Input.GetKey(KeyCode.D))
+        {
+            targetRotation = Quaternion.LookRotation(Vector3.right);
+            movement = Vector3.right;
         }
 
-        // Apply the movement to the Rigidbody
-        rb.AddForce(movementSpeed * movement);
-        rb.velocity = movementSpeed * Time.deltaTime * movement;
+        HandleRotation();
 
-        animator.SetFloat("Speed_f", movementSpeed * Mathf.Abs(moveHorizontal) * Mathf.Abs(moveVertical) * 10.0f);
+        HandleMovement();
+
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            Attack();
+        }
+
+    }
+
+    private void HandleRotation()
+    {
+        if (!CheckAngle(targetRotation, 5.0f))
+        {
+            if (rb.velocity == Vector3.zero)
+            {
+                rb.velocity /= slowingFactor;
+            }
+
+            // Smoothly rotate towards the target rotation
+            transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
+
+            // Check if rotation has changed since last frame
+            // isRotating = CheckAngle(lastRotation, 2.0f);
+        }
+    }
+
+    private void HandleMovement()
+    {
+        if (CheckAngle(targetRotation, 10.0f) && !animator.GetBool("IsSlashing_b"))
+        {
+            rb.velocity = movementSpeed * Time.deltaTime * movement;
+        }
+
+        if (movement != Vector3.zero && CheckAngle(targetRotation, 5.0f))
+        {
+            animator.SetFloat("Speed_f", movementSpeed * 10.0f);
+        }
+        else
+        {
+            animator.SetFloat("Speed_f", 0.0f);
+        }
+    }
+
+    private void Attack()
+    {
+        animator.SetBool("IsSlashing_b", true);
+        StartCoroutine(ResetAttack());
+    }
+
+    private IEnumerator ResetAttack()
+    {
+        yield return new WaitForSeconds(attackDuration);
+        animator.SetBool("IsSlashing_b", false);
+    }
+
+    private bool CheckAngle(Quaternion referenceAngle, float threshold)
+    {
+        return Quaternion.Angle(transform.rotation, referenceAngle) < threshold; // Threshold of 2 degrees
+
     }
 }
