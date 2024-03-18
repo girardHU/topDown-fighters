@@ -6,7 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     public float rotationSpeed = 15.0f; // Control the speed of rotation
     public float movementSpeed = 250.0f;
-    public float slowingFactor = 1.2f;
+    public float slowingFactor = 1.1f;
 
     private float attackDuration = 0.5f;
     private Quaternion targetRotation;
@@ -47,6 +47,10 @@ public class PlayerController : MonoBehaviour
             targetRotation = Quaternion.LookRotation(Vector3.right);
             movement = Vector3.right;
         }
+        else if (Input.GetKeyDown(KeyCode.End))
+        {
+            Kill();
+        }
 
         HandleRotation();
 
@@ -71,9 +75,6 @@ public class PlayerController : MonoBehaviour
 
             // Smoothly rotate towards the target rotation
             transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
-
-            // Check if rotation has changed since last frame
-            // isRotating = CheckAngle(lastRotation, 2.0f);
         }
     }
 
@@ -84,14 +85,9 @@ public class PlayerController : MonoBehaviour
             rb.velocity = movementSpeed * Time.deltaTime * movement;
         }
 
-        if (movement != Vector3.zero && CheckAngle(targetRotation, 5.0f))
-        {
-            animator.SetFloat("Speed_f", movementSpeed * 10.0f);
-        }
-        else
-        {
-            animator.SetFloat("Speed_f", 0.0f);
-        }
+        // Change Boolean for running animation
+        animator.SetBool("IsRunning_b", movement != Vector3.zero && CheckAngle(targetRotation, 5.0f));
+
     }
 
     private void Attack()
@@ -108,7 +104,21 @@ public class PlayerController : MonoBehaviour
 
     private bool CheckAngle(Quaternion referenceAngle, float threshold)
     {
-        return Quaternion.Angle(transform.rotation, referenceAngle) < threshold; // Threshold of 2 degrees
+        return Quaternion.Angle(transform.rotation, referenceAngle) < threshold;
 
+    }
+
+    private void Kill()
+    {
+        animator.SetBool("IsDead_b", true);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        Debug.Log(other);
+        if (!other.transform.IsChildOf(transform) && other.CompareTag("Player Body"))
+        {
+            Kill();
+        }
     }
 }
